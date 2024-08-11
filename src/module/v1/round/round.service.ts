@@ -39,12 +39,16 @@ export class RoundService {
   }
 
   async fetchWinnersForRound(roundId: string) {
-    const response = await firstValueFrom(
-      this.httpService.get(
-        `https://rounds.wtf/api/public/v1/rounds/${roundId}/winners`,
-      ),
-    );
-    return response.data.winners;
+   try {
+     const response = await firstValueFrom(
+       this.httpService.get(
+         `https://rounds.wtf/api/public/v1/rounds/${roundId}/winners`,
+       ),
+     );
+     return response.data.winners;
+   } catch (error) {
+    return undefined
+   }
   }
 
   async saveRoundsAndWinners(communityId: string) {
@@ -68,42 +72,9 @@ export class RoundService {
       console.log(rounds, 'total');
       for (const round of rounds) {
         if (round.areWinnersReported) {
-          let times = 0; // Assuming times is defined and updated elsewhere in your code
-
-          if (times % 10 === 0) {
-            console.log(
-              `The number ${times} is divisible by 10. Delaying fetching winners by 10 seconds...`,
-            );
-            setTimeout(async () => {
-              let winners = await this.fetchWinnersForRound(round.id);
-              winners = winners.map((winner) => {
-                return { ...winner, amount: parseFloat(winner.amount) };
-              });
-
-              // Save round to MongoDB
-              await this.roundModel.updateOne(
-                { roundId: round.id },
-                {
-                  roundId: round.id,
-                  communityId: round.communityId,
-                  areWinnersReported: round.areWinnersReported,
-                  denomination: round.award.assetType,
-                  createdAt: new Date(),
-                  winners,
-                },
-                { upsert: true },
-              );
-
-              console.log(
-                'Winners fetched and round updated after 10 seconds.',
-              );
-            }, 10000); // 10,000 milliseconds = 10 seconds
-          } else {
-            console.log(
-              `The number ${times} is not divisible by 10. Fetching winners immediately.`,
-            );
-
-            let winners = await this.fetchWinnersForRound(round.id);
+          let winners = await this.fetchWinnersForRound(round.id);
+          console.log(winners)
+          if (winners) {
             winners = winners.map((winner) => {
               return { ...winner, amount: parseFloat(winner.amount) };
             });
@@ -121,8 +92,6 @@ export class RoundService {
               },
               { upsert: true },
             );
-
-            console.log('Winners fetched and round updated immediately.');
           }
         }
       }
