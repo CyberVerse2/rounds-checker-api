@@ -10,6 +10,37 @@
 //     iv. user's total earnings as an array of objects where each object has a property of the total amount he'she has earned
 async function getWarpcastEarnings(username) {
   // Fetch all rounds the user participated in
-  
 }
 
+import Moralis from 'moralis';
+import { EvmChain } from '@moralisweb3/common-evm-utils';
+import { ENVIRONMENT } from '../configs/environment';
+
+Moralis.start({
+  apiKey: ENVIRONMENT.MORALIS.API_KEY,
+}).then(() => {
+  console.log('Started Moralis');
+});
+
+export const getTokenInfo = async (addresses) => {
+  try {
+    let chain = EvmChain.BASE;
+
+    let response = await Moralis.EvmApi.token.getTokenMetadata({
+      addresses,
+      chain,
+    });
+    if (!response) {
+      chain = EvmChain.ETHEREUM;
+      response = await Moralis.EvmApi.token.getTokenMetadata({
+        addresses,
+        chain,
+      });
+    }
+    console.log(response.toJSON()[0].symbol);
+
+    return response.toJSON()[0];
+  } catch (error) {
+    console.error(error);
+  }
+};

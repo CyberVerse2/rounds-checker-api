@@ -5,6 +5,8 @@ import { Model } from 'mongoose';
 import { firstValueFrom } from 'rxjs';
 import { Round, RoundDocument } from './round.model';
 import { User, UserDocument } from './user.model';
+import { getTokenInfo } from 'src/common/utils/helper';
+import exp from 'constants';
 
 @Injectable()
 export class RoundService {
@@ -16,7 +18,7 @@ export class RoundService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
   ) {}
 
-  async fetchRounds(communityId: string) {
+  async fetchRounds() {
     let allRounds = [];
     let allPages = 100;
     const pageSize = 100; // Adjust the page size if needed
@@ -39,54 +41,70 @@ export class RoundService {
   }
 
   async fetchWinnersForRound(roundId: string) {
-   try {
-     const response = await firstValueFrom(
-       this.httpService.get(
-         `https://rounds.wtf/api/public/v1/rounds/${roundId}/winners`,
-       ),
-     );
-     return response.data.winners;
-   } catch (error) {
-    return undefined
-   }
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(
+          `https://rounds.wtf/api/public/v1/rounds/${roundId}/winners`,
+        ),
+      );
+      return response.data.winners;
+    } catch (error) {
+      return undefined;
+    }
   }
 
-  async saveRoundsAndWinners(communityId: string) {
+  async saveRoundsAndWinners() {
     let rounds;
     rounds = await this.roundModel.find({}).sort({ createdAt: -1 });
     let currentDate = new Date(new Date().getTime() + 60 * 60 * 1000);
+    const expiryDate = new Date(
+      new Date(rounds && rounds[0]?.createdAt).getTime() + 7 * 60 * 60 * 1000,
+    );  
 
     console.log(
       currentDate,
       rounds[0]?.createdAt,
-      rounds[0]?.createdAt <= currentDate,
-      rounds && rounds[0]?.createdAt <= currentDate,
+      expiryDate <= currentDate,
       rounds.length === 0,
     );
-    if (rounds.length > 0 && rounds[0]?.createdAt <= currentDate) {
+    if (rounds.length > 0 && currentDate < expiryDate) {
       return rounds;
     } else {
       await this.deleteOldRounds();
-      rounds = await this.fetchRounds(communityId);
-      console.log(rounds.length, 'from the else statement');
-      console.log(rounds, 'total');
+      rounds = await this.fetchRounds();
+      console.log(rounds);
       for (const round of rounds) {
         if (round.areWinnersReported) {
           let winners = await this.fetchWinnersForRound(round.id);
-          console.log(winners)
+          console.log(winners);
           if (winners) {
             winners = winners.map((winner) => {
               return { ...winner, amount: parseFloat(winner.amount) };
             });
 
             // Save round to MongoDB
+            const tokenInfo = round.award?.tokenAddress
+              ? await getTokenInfo([round.award.tokenAddress])
+              : {
+                  symbol: 'ETH',
+                  logo: 'https://cryptologos.cc/logos/ethereum-eth-logo.png',
+                };
+            console.log(tokenInfo, 'tokenInfo');
+            const tokenTicker =
+              round.award.assetType === 'ERC20'
+                ? tokenInfo.symbol
+                : round.award.assetType;
             await this.roundModel.updateOne(
               { roundId: round.id },
               {
                 roundId: round.id,
                 communityId: round.communityId,
+                name: round.name,
+                status: round.status,
                 areWinnersReported: round.areWinnersReported,
-                denomination: round.award.assetType,
+                denomination: tokenTicker,
+                tokenAddress: round.award.tokenAddress,
+                tokenLogo: tokenInfo?.logo ?? '',
                 createdAt: new Date(),
                 winners,
               },
@@ -152,9 +170,9 @@ export class RoundService {
     return user;
   }
 
-  async main(userId: string, communityId: string) {
+  async main(userId: string) {
     try {
-      await this.saveRoundsAndWinners(communityId);
+      await this.saveRoundsAndWinners();
       const user = await this.saveUser(userId);
       this.logger.log(user);
       return user;

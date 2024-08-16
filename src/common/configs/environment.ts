@@ -24,6 +24,9 @@ export interface IEnvironment {
   APITOOLKIT: {
     API_KEY: string;
   };
+  MORALIS: {
+    API_KEY: string;
+  };
 }
 
 export const ENVIRONMENT: IEnvironment = {
@@ -49,4 +52,7 @@ export const ENVIRONMENT: IEnvironment = {
   APITOOLKIT: {
     API_KEY: process.env.APITOOLKIT_API_KEY,
   },
+  MORALIS: {
+    API_KEY: process.env.MORALIS_API_KEY,
+  }
 };

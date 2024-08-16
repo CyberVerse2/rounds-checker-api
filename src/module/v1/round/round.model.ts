@@ -12,6 +12,18 @@ export class Round {
   communityId: string;
 
   @Prop()
+  name: string;
+
+  @Prop()
+  status: string;
+
+  @Prop()
+  logo: string;
+
+  @Prop()
+  tokenAddress: string;
+
+  @Prop()
   areWinnersReported: boolean;
 
   @Prop()

@@ -6,8 +6,8 @@ export class RoundController {
   constructor(private readonly roundsService: RoundService) {}
 
   @Get('/user')
-  async getUserData(@Query('userId') userId: string, @Query('communityId') communityId: string) {
-    const user = await this.roundsService.main(userId, communityId);
+  async getUserData(@Query('userId') userId: string, ) {
+    const user = await this.roundsService.main(userId);
     return user;
   }
 }
