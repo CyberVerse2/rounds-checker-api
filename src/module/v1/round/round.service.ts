@@ -147,7 +147,11 @@ export class RoundService {
           user.roundsParticipated.push(parseInt(round.roundId));
 
           userWinnings.forEach((winning) => {
-            user.winnings.push({ ...winning, fid: undefined, round });
+            user.winnings.push({
+              ...winning,
+              fid: undefined,
+              round: { ...round.toJSON(), winners: undefined },
+            });
           });
 
           userWinnings.forEach((winning) => {
@@ -168,7 +172,12 @@ export class RoundService {
     }
 
     await user.save();
-    return {...user.toJSON(), _id: undefined, __v: undefined, winnings: user.winnings.sort((a, b) => b.startDate - a.startDate)};
+    return {
+      ...user.toJSON(),
+      _id: undefined,
+      __v: undefined,
+      winnings: user.winnings.sort((a, b) => b.startDate - a.startDate),
+    };
   }
 
   async main(userId: string) {
