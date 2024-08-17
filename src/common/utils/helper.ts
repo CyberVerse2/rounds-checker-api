@@ -30,15 +30,14 @@ export const getTokenInfo = async (addresses) => {
       addresses,
       chain,
     });
-    if (!response) {
+    console.log(response.toJSON()[0]);
+    if (!response.toJSON()[0]?.symbol) {
       chain = EvmChain.ETHEREUM;
       response = await Moralis.EvmApi.token.getTokenMetadata({
         addresses,
         chain,
       });
     }
-    console.log(response.toJSON()[0].symbol);
-
     return response.toJSON()[0];
   } catch (error) {
     console.error(error);

@@ -59,7 +59,7 @@ export class RoundService {
     let currentDate = new Date(new Date().getTime() + 60 * 60 * 1000);
     const expiryDate = new Date(
       new Date(rounds && rounds[0]?.createdAt).getTime() + 7 * 60 * 60 * 1000,
-    );  
+    );
 
     console.log(
       currentDate,
@@ -88,12 +88,13 @@ export class RoundService {
               : {
                   symbol: 'ETH',
                   logo: 'https://cryptologos.cc/logos/ethereum-eth-logo.png',
-                };
-            console.log(tokenInfo, 'tokenInfo');
+              };
+            
             const tokenTicker =
               round.award.assetType === 'ERC20'
                 ? tokenInfo.symbol
                 : round.award.assetType;
+            console.log(tokenInfo, 'tokenInfo');
             await this.roundModel.updateOne(
               { roundId: round.id },
               {
