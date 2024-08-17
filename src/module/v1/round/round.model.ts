@@ -27,6 +27,9 @@ export class Round {
   areWinnersReported: boolean;
 
   @Prop()
+  startsAt: Date;
+
+  @Prop()
   denomination: string;
 
   @Prop({ type: Array })

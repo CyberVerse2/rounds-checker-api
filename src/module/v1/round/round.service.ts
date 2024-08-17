@@ -6,7 +6,6 @@ import { firstValueFrom } from 'rxjs';
 import { Round, RoundDocument } from './round.model';
 import { User, UserDocument } from './user.model';
 import { getTokenInfo } from 'src/common/utils/helper';
-import exp from 'constants';
 
 @Injectable()
 export class RoundService {
@@ -86,10 +85,10 @@ export class RoundService {
             const tokenInfo = round.award?.tokenAddress
               ? await getTokenInfo([round.award.tokenAddress])
               : {
-                  symbol: 'ETH',
-                  logo: 'https://cryptologos.cc/logos/ethereum-eth-logo.png',
-              };
-            
+                  symbol: 'UNKNOWN',
+                  logo: 'https://res.cloudinary.com/dbuaprzc0/image/upload/v1723862788/ndtmestxlglrkgn1lcq8.png',
+                };
+
             const tokenTicker =
               round.award.assetType === 'ERC20'
                 ? tokenInfo.symbol
@@ -102,10 +101,13 @@ export class RoundService {
                 communityId: round.communityId,
                 name: round.name,
                 status: round.status,
+                startsAt: round.startsAt,
                 areWinnersReported: round.areWinnersReported,
-                denomination: tokenTicker,
+                denomination: tokenTicker.length <= 0 ? 'UNKNOWN' : tokenTicker,
                 tokenAddress: round.award.tokenAddress,
-                tokenLogo: tokenInfo?.logo ?? '',
+                logo:
+                  tokenInfo?.logo ??
+                  'https://res.cloudinary.com/dbuaprzc0/image/upload/v1723862788/ndtmestxlglrkgn1lcq8.png',
                 createdAt: new Date(),
                 winners,
               },
@@ -118,7 +120,6 @@ export class RoundService {
   }
 
   async deleteOldRounds() {
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     await this.roundModel.deleteMany();
   }
 
@@ -145,9 +146,8 @@ export class RoundService {
         if (userWinnings.length > 0) {
           user.roundsParticipated.push(parseInt(round.roundId));
 
-          // Filter out duplicate winnings before adding
           userWinnings.forEach((winning) => {
-            user.winnings.push(winning);
+            user.winnings.push({ ...winning, fid: undefined, round });
           });
 
           userWinnings.forEach((winning) => {
@@ -168,7 +168,7 @@ export class RoundService {
     }
 
     await user.save();
-    return user;
+    return {...user.toJSON(), _id: undefined, __v: undefined, winnings: user.winnings.sort((a, b) => b.startDate - a.startDate)};
   }
 
   async main(userId: string) {

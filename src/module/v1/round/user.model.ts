@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import mongoose, { Document, Mongoose } from 'mongoose';
+import { Round } from './round.model';
 
 export type UserDocument = User & Document;
 
