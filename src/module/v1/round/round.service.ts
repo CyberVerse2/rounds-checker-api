@@ -6,6 +6,7 @@ import { firstValueFrom } from 'rxjs';
 import { Round, RoundDocument } from './round.model';
 import { User, UserDocument } from './user.model';
 import { getTokenInfo } from 'src/common/utils/helper';
+import { Cron } from '@nestjs/schedule';
 
 @Injectable()
 export class RoundService {
@@ -123,6 +124,15 @@ export class RoundService {
     await this.roundModel.deleteMany();
   }
 
+  @Cron('0 */12 * * *')
+  async handleCron() {
+    try {
+      await this.saveRoundsAndWinners();
+      this.logger.log('Cron job scheduled to run 2 times a day');
+    } catch (error) {
+      this.logger.error('Error:', error?.message);
+    }
+  }
   async saveUser(userId: string) {
     let user = await this.userModel.findOne({ farcasterId: userId });
     console.log(user, !user);
@@ -182,7 +192,6 @@ export class RoundService {
 
   async main(userId: string) {
     try {
-      await this.saveRoundsAndWinners();
       const user = await this.saveUser(userId);
       this.logger.log(user);
       return user;

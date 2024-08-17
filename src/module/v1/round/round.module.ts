@@ -5,6 +5,7 @@ import { RoundController } from './round.controller';
 import { User, UserSchema } from './user.model';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Round, RoundSchema } from './round.model';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { Round, RoundSchema } from './round.model';
       },
     ]),
     HttpModule,
+    ScheduleModule.forRoot(),
   ],
   providers: [RoundService],
   exports: [RoundService],

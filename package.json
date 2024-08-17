@@ -25,6 +25,7 @@
     "@nestjs/core": "^10.3.10",
     "@nestjs/mongoose": "^10.0.10",
     "@nestjs/platform-express": "^10.0.0",
+    "@nestjs/schedule": "^4.1.0",
     "@types/bcrypt": "^5.0.2",
     "axios": "^1.7.3",
     "bcrypt": "^5.1.1",
@@ -35,6 +36,7 @@
     "ioredis": "^5.4.1",
     "mongoose": "^8.5.2",
     "moralis": "^2.27.2",
+    "node-cron": "^3.0.3",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1"
   },
