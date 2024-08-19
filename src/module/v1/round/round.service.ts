@@ -192,6 +192,7 @@ export class RoundService {
 
   async main(userId: string) {
     try {
+      await this.saveRoundsAndWinners()
       const user = await this.saveUser(userId);
       this.logger.log(user);
       return user;
