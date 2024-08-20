@@ -124,11 +124,11 @@ export class RoundService {
     await this.roundModel.deleteMany();
   }
 
-  @Cron('0 */12 * * *')
+  @Cron('0 */6 * * *')
   async handleCron() {
     try {
       await this.saveRoundsAndWinners();
-      this.logger.log('Cron job scheduled to run 2 times a day');
+      this.logger.log('Cron job scheduled to run 4 times a day');
     } catch (error) {
       this.logger.error('Error:', error?.message);
     }
