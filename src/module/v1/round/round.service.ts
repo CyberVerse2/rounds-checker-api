@@ -145,6 +145,7 @@ export class RoundService {
       },
       {
         $project: {
+          _id: 1,
           roundId: 1,
           communityId: 1,
           name: 1,
@@ -175,7 +176,27 @@ export class RoundService {
             $push: {
               id: { $concat: ['farcaster_', { $toString: '$winners.fid' }] },
               amount: '$winners.amount',
-              round: '$$ROOT',
+              round: {
+                $mergeObjects: [
+                  '$$ROOT',
+                  {
+                    winners: '$$REMOVE',
+                    _id: { $toString: '$_id' },
+                    createdAt: {
+                      $dateToString: {
+                        format: '%Y-%m-%dT%H:%M:%S.%LZ',
+                        date: '$createdAt',
+                      },
+                    },
+                    startsAt: {
+                      $dateToString: {
+                        format: '%Y-%m-%dT%H:%M:%S.%LZ',
+                        date: '$startsAt',
+                      },
+                    },
+                  },
+                ],
+              },
             },
           },
           totalEarnings: {
@@ -225,7 +246,6 @@ export class RoundService {
       },
     ]);
 
-
     let userData = aggregationResult[0] || {
       roundsParticipated: [],
       winnings: [],
@@ -237,15 +257,9 @@ export class RoundService {
       { farcasterId: userIdInt },
       {
         $set: {
-          farcasterId: userIdInt,
-          roundsParticipated: userData.roundsParticipated.map((id) =>
-            parseInt(id),
-          ),
-          winnings: userData.winnings.map((w) => ({
-            ...w,
-            fid: undefined,
-            round: { ...w, winners: undefined },
-          })),
+          farcasterId: userIdInt.toString(),
+          roundsParticipated: userData.roundsParticipated,
+          winnings: userData.winnings,
           totalEarnings: userData.totalEarnings,
         },
       },
@@ -254,7 +268,11 @@ export class RoundService {
 
     // Remove unnecessary fields and sort winnings
     const { _id, __v, ...userWithoutId } = updatedUser;
-    userWithoutId.winnings.sort((a, b) => b.startDate - a.startDate);
+    userWithoutId.winnings.sort(
+      (a, b) =>
+        new Date(b.round.startsAt).getTime() -
+        new Date(a.round.startsAt).getTime(),
+    );
 
     return userWithoutId;
   }
