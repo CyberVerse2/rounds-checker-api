@@ -134,60 +134,129 @@ export class RoundService {
     }
   }
   async saveUser(userId: string) {
-    let user = await this.userModel.findOne({ farcasterId: userId });
-    console.log(user, !user);
+    const userIdInt = parseInt(userId);
 
-    if (!user) {
-      user = new this.userModel({
-        farcasterId: parseInt(userId),
-        roundsParticipated: [],
-        winnings: [],
-        totalEarnings: [],
-      });
-    }
+    // Use aggregation pipeline to fetch and process data in a single query
+    const aggregationResult = await this.roundModel.aggregate([
+      {
+        $match: {
+          'winners.fid': userIdInt,
+        },
+      },
+      {
+        $project: {
+          roundId: 1,
+          communityId: 1,
+          name: 1,
+          status: 1,
+          startsAt: 1,
+          areWinnersReported: 1,
+          denomination: 1,
+          tokenAddress: 1,
+          logo: 1,
+          createdAt: 1,
+          winners: {
+            $filter: {
+              input: '$winners',
+              as: 'winner',
+              cond: { $eq: ['$$winner.fid', userIdInt] },
+            },
+          },
+        },
+      },
+      {
+        $unwind: '$winners',
+      },
+      {
+        $group: {
+          _id: null,
+          roundsParticipated: { $addToSet: '$roundId' },
+          winnings: {
+            $push: {
+              id: { $concat: ['farcaster_', { $toString: '$winners.fid' }] },
+              amount: '$winners.amount',
+              round: '$$ROOT',
+            },
+          },
+          totalEarnings: {
+            $push: {
+              denomination: '$denomination',
+              amount: '$winners.amount',
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          roundsParticipated: 1,
+          winnings: 1,
+          totalEarnings: {
+            $reduce: {
+              input: '$totalEarnings',
+              initialValue: [],
+              in: {
+                $cond: [
+                  { $in: ['$$this.denomination', '$$value.denomination'] },
+                  {
+                    $map: {
+                      input: '$$value',
+                      as: 'v',
+                      in: {
+                        denomination: '$$v.denomination',
+                        amount: {
+                          $cond: [
+                            {
+                              $eq: ['$$v.denomination', '$$this.denomination'],
+                            },
+                            { $add: ['$$v.amount', '$$this.amount'] },
+                            '$$v.amount',
+                          ],
+                        },
+                      },
+                    },
+                  },
+                  { $concatArrays: ['$$value', ['$$this']] },
+                ],
+              },
+            },
+          },
+        },
+      },
+    ]);
 
-    const rounds = await this.roundModel.find();
-    for (const round of rounds) {
-      if (!user.roundsParticipated.includes(parseInt(round.roundId))) {
-        const userWinnings = round.winners.filter(
-          (winner) => winner.fid == userId,
-        );
-        console.log(userWinnings, 'userWinnings');
-        if (userWinnings.length > 0) {
-          user.roundsParticipated.push(parseInt(round.roundId));
 
-          userWinnings.forEach((winning) => {
-            user.winnings.push({
-              ...winning,
-              fid: undefined,
-              round: { ...round.toJSON(), winners: undefined },
-            });
-          });
-
-          userWinnings.forEach((winning) => {
-            const existingEarning = user.totalEarnings.find(
-              (earning) => earning.denomination === round.denomination,
-            );
-            if (existingEarning) {
-              existingEarning.amount += parseFloat(winning.amount);
-            } else {
-              user.totalEarnings.push({
-                denomination: round.denomination,
-                amount: parseFloat(winning.amount),
-              });
-            }
-          });
-        }
-      }
-    }
-
-    await user.save();
-    return {
-      ...user.toJSON(),
-      _id: undefined,
-      __v: undefined,
-      winnings: user.winnings.sort((a, b) => b.startDate - a.startDate),
+    let userData = aggregationResult[0] || {
+      roundsParticipated: [],
+      winnings: [],
+      totalEarnings: [],
     };
+
+    // Update or create user document
+    const updatedUser = await this.userModel.findOneAndUpdate(
+      { farcasterId: userIdInt },
+      {
+        $set: {
+          farcasterId: userIdInt,
+          roundsParticipated: userData.roundsParticipated.map((id) =>
+            parseInt(id),
+          ),
+          winnings: userData.winnings.map((w) => ({
+            ...w,
+            fid: undefined,
+            round: { ...w, winners: undefined },
+          })),
+          totalEarnings: userData.totalEarnings,
+        },
+      },
+      { new: true, upsert: true, lean: true },
+    );
+
+    // Remove unnecessary fields and sort winnings
+    const { _id, __v, ...userWithoutId } = updatedUser;
+    userWithoutId.winnings.sort((a, b) => b.startDate - a.startDate);
+
+    return userWithoutId;
   }
 
   async main(userId: string) {
