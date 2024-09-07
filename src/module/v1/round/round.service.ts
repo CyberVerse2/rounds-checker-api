@@ -70,13 +70,11 @@ export class RoundService {
     if (rounds.length > 0 && currentDate < expiryDate) {
       return rounds;
     } else {
-      await this.deleteOldRounds();
+      let roundsdb = rounds.map((round) => round.roundId);
       rounds = await this.fetchRounds();
-      console.log(rounds);
       for (const round of rounds) {
-        if (round.areWinnersReported) {
+        if (round.areWinnersReported && !roundsdb.includes(round.id)) {
           let winners = await this.fetchWinnersForRound(round.id);
-          console.log(winners);
           if (winners) {
             winners = winners.map((winner) => {
               return { ...winner, amount: parseFloat(winner.amount) };
