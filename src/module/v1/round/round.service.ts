@@ -47,6 +47,7 @@ export class RoundService {
           `https://rounds.wtf/api/public/v1/rounds/${roundId}/winners`,
         ),
       );
+      console.log(response.data);
       return response.data.winners;
     } catch (error) {
       return undefined;
@@ -67,15 +68,17 @@ export class RoundService {
       expiryDate <= currentDate,
       rounds.length === 0,
     );
-    if (rounds.length > 0 && currentDate < expiryDate) {
+    if (rounds.length < 0 && currentDate < expiryDate) {
       return rounds;
     } else {
-      let roundsdb = rounds.map((round) => round.roundId);
+      let roundsdb = rounds.map((round) => parseInt(round.roundId));
       rounds = await this.fetchRounds();
       for (const round of rounds) {
         if (round.areWinnersReported && !roundsdb.includes(round.id)) {
           let winners = await this.fetchWinnersForRound(round.id);
+          console.log(winners);
           if (winners) {
+            console.log('stuff');
             winners = winners.map((winner) => {
               return { ...winner, amount: parseFloat(winner.amount) };
             });
@@ -93,7 +96,7 @@ export class RoundService {
                 ? tokenInfo.symbol
                 : round.award.assetType;
             console.log(tokenInfo, 'tokenInfo');
-            await this.roundModel.updateOne(
+            const newRound = await this.roundModel.updateOne(
               { roundId: round.id },
               {
                 roundId: round.id,
@@ -110,8 +113,9 @@ export class RoundService {
                 createdAt: new Date(),
                 winners,
               },
-              { upsert: true },
+              { upsert: true, new: true },
             );
+            console.log(newRound);
           }
         }
       }
@@ -122,11 +126,11 @@ export class RoundService {
     await this.roundModel.deleteMany();
   }
 
-  @Cron('0 */6 * * *')
+  @Cron('0 */1 * * *')
   async handleCron() {
     try {
       await this.saveRoundsAndWinners();
-      this.logger.log('Cron job scheduled to run 4 times a day');
+      this.logger.log('Cron job scheduled to run every hour');
     } catch (error) {
       this.logger.error('Error:', error?.message);
     }
